@@ -48,3 +48,7 @@ In this way the border flickers when PETSCII interpreter is faster than the inco
 - C128: flicker at 9600 baud, no flicker at 19200.
 - C64: flicker at 19200 baud, no flicker at 38400.
 - Plus/4: flicker at 19200 baud, and that's the maximum rate.
+
+## Known issues
+
+The serial driver sometimes crashes on the C128. While the [issue](https://github.com/cc65/cc65/issues/2443) have been brought up quite a while ago, it's still not clear what causes it. The workaround for the time being is to use 19200 baud rate on the C128, and not 38400. This seems to make the problem go away in VICE.
