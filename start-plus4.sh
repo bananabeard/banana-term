@@ -12,4 +12,5 @@ xplus4 \
   -maximized \
   -rsdev1 "${ADDRESS}" \
   -rsdev1baud 19200 \
+  +rsdev1ip232 \
   "${PROGRAM}"

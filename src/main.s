@@ -7,6 +7,8 @@ serialGetChar: .res 1
 
 .data
 
+connected: .byte 0
+
 .if .defined(CURSOR_SHOW)
     cursorOn: .byte 0
 .endif
@@ -28,11 +30,19 @@ serialGetChar: .res 1
 ; must be terminated by a zero byte
 ; must be less than 256 bytes
 modemCommands:
-    ; ##MODEM_COMMANDS
-    .byte $00
+    .res 256, $00 ; ##MODEM_COMMANDS
 
 modemCommandsError:
     .byte "Modem commands failed.", PETSCII_RETURN
+    .byte "Error code: "
+    .byte $00
+
+serialDisconnected:
+    .byte "Disconnected.", PETSCII_RETURN
+    .byte $00
+
+serialGetError:
+    .byte "Serial get failed.", PETSCII_RETURN
     .byte "Error code: "
     .byte $00
 
@@ -54,6 +64,11 @@ serialOpenOk:
     .byte "Serial port is open.", PETSCII_RETURN
     .byte $00
 
+serialPutError:
+    .byte "Serial put failed.", PETSCII_RETURN
+    .byte "Error code: "
+    .byte $00
+
 serialOpenParameters:
     .byte SERIAL_BAUD
     .byte SER_BITS_8
@@ -65,7 +80,7 @@ welcomeMessage:
     .byte PETSCII_CLEAR
     .byte TERMINAL_BANANA_COLOR_PETSCII, "Banana"
     .byte TERMINAL_TEXT_COLOR_PETSCII, "-Term v"
-    .byte "1.0" ; #VERSION#
+    .byte "1.1" ; #VERSION#
     .byte PETSCII_RETURN
     .byte "  "
     .if .defined(__C128__) .or .defined(__C64__)
@@ -144,7 +159,7 @@ welcomeMessage:
             .assert 0, error, "target not supported"
         .endif
 
-        loadPointer ptr2, welcomeMessage
+        loadPointerY ptr2, welcomeMessage
         jsr screenPutString
 
         .if .defined(BELL_BORDER_COLOR) .or .defined(BELL_SOUND_VOLUME)
@@ -158,20 +173,20 @@ welcomeMessage:
         jsr _ser_install
         cmp #SER_ERR_OK
         beq @serialInstallOk
-        loadPointer ptr2, serialInstallError
+        loadPointerY ptr2, serialInstallError
         jmp showErrorAndHalt
     @serialInstallOk:
-        loadPointer ptr2, serialInstallOk
+        loadPointerY ptr2, serialInstallOk
         jsr screenPutString
 
-        loadPointer ptr1, serialOpenParameters
+        loadPointerY ptr1, serialOpenParameters
         jsr ser_open
         cmp #SER_ERR_OK
         beq @serialOpenOk
-        loadPointer ptr2, serialOpenError
+        loadPointerY ptr2, serialOpenError
         jmp showErrorAndHalt
     @serialOpenOk:
-        loadPointer ptr2, serialOpenOk
+        loadPointerY ptr2, serialOpenOk
         jsr screenPutString
 
         ; modem commands
@@ -184,31 +199,60 @@ welcomeMessage:
         inx
         stx modemCommandsIndex
         jsr ser_put
-        cmp #$00
+        cmp #SER_ERR_OK
         beq @modemCommandsPutOk
-        loadPointer ptr2, modemCommandsError
+        loadPointerY ptr2, modemCommandsError
         jmp showErrorAndHalt
     @modemCommandsPutOk:
         jmp @modemCommandsLoop
     @modemCommandsEnd:
 
     @mainLoop:
+        lda connected
+        bne @connectionChecked
+        lda ACIA_STATUS
+        and #ACIA_STATUS_DCD
+        bne @connectionChecked
+        lda #$01
+        sta connected
+    @connectionChecked:
+
+        ; read keyboard
         kernalGetIn
         cmp #$00
         beq @keyboardEnd
         jsr ser_put
+        cmp #SER_ERR_OK
+        beq @keyboardEnd
+        cmp #SER_ERR_OVERFLOW
+        beq @putOverflow
+        loadPointerY ptr2, serialPutError
+        jmp showErrorAndHalt
+    @putOverflow:
         .if .defined(BELL_BORDER_COLOR) .or .defined(BELL_SOUND_VOLUME) .or .defined(BELL_KERNAL)
-            cmp #$00
-            beq @keyboardEnd
             jsr interruptBell
         .endif
     @keyboardEnd:
 
-        loadPointer ptr1, serialGetChar
+        ; read serial
+        loadPointerY ptr1, serialGetChar
         jsr ser_get
         cmp #SER_ERR_OK
         beq @gotChar
-        ; no char or error
+        cmp #SER_ERR_NO_DATA
+        beq @noChar
+        loadPointerY ptr2, serialGetError
+        jmp showErrorAndHalt
+    @noChar:
+        lda connected
+        beq @showCursor
+        lda ACIA_STATUS
+        and #ACIA_STATUS_DCD
+        beq @showCursor
+        lda #$00
+        sta connected
+        jsr showDisconnected
+    @showCursor:
         .if .defined(CURSOR_SHOW)
             lda cursorOn
             bne @cursorOn
@@ -235,21 +279,42 @@ welcomeMessage:
         jmp @mainLoop
 .endproc
 
-; a: error code
-; ptr2: message
-.proc showErrorAndHalt
+; a: border color
+; clobbers: a, y, ptr1, ptr2
+.proc resetScreen
+        pha
         .if .defined(BELL_BORDER_COLOR) .or .defined(BELL_SOUND_VOLUME)
             jsr interruptStopBell
         .endif
-        tax
-        lda #TERMINAL_BORDER_COLOR_ERROR
+        pla
         sta SCREEN_BORDER_COLOR
         jsr screenPutControlCharLowerCase
         lda #TERMINAL_TEXT_COLOR
         sta screenCursorColor
+        lda #$00
+        sta screenCursorReverse
         jsr screenMoveCursorNextLine
+        rts
+.endproc
+
+; clobbers: a, y, ptr1, ptr2
+.proc showDisconnected
+        lda #TERMINAL_BORDER_COLOR_DISCONNECTED
+        jsr resetScreen
+        loadPointerY ptr2, serialDisconnected
         jsr screenPutString
-        txa
+        rts
+.endproc
+
+; a: error code
+; ptr2: message
+; never returns
+.proc showErrorAndHalt
+        pha
+        lda #TERMINAL_BORDER_COLOR_ERROR
+        jsr resetScreen
+        jsr screenPutString
+        pla
         jsr screenPutHexByte
     @loop:
         jmp @loop

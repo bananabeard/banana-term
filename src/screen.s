@@ -453,7 +453,7 @@ screenHexCodes: .byte "0123456789abcdef"
 .proc screenPutControlCharClear
     .assert (SCREEN_HEIGHT * SCREEN_WIDTH = 1000), error, "screen size is not supported"
     .macro clearMacro address, value
-        loadPointer ptr1, address
+        loadPointerY ptr1, address
         lda #value
         ldy #$00
         jsr memset
@@ -706,10 +706,10 @@ screenHexCodes: .byte "0123456789abcdef"
     .assert (<SCREEN_MEMORY = 0), error, "screen memory is not aligned"
 
     ; scroll whole screen up by one line
-    loadPointer ptr1, SCREEN_MEMORY
-    loadPointer ptr2, COLOR_RAM
-    loadPointer ptr3, (SCREEN_MEMORY+SCREEN_WIDTH)
-    loadPointer ptr4, (COLOR_RAM+SCREEN_WIDTH)
+    loadPointerY ptr1, SCREEN_MEMORY
+    loadPointerY ptr2, COLOR_RAM
+    loadPointerY ptr3, (SCREEN_MEMORY+SCREEN_WIDTH)
+    loadPointerY ptr4, (COLOR_RAM+SCREEN_WIDTH)
     ldy #$00
     jsr memcpyDoubleAscending
     inc ptr1+1
@@ -724,19 +724,19 @@ screenHexCodes: .byte "0123456789abcdef"
     inc ptr4+1
     ldy #$00
     jsr memcpyDoubleAscending
-    loadPointer ptr1, (SCREEN_MEMORY+SCREEN_WIDTH*(SCREEN_HEIGHT-1)-$100)
-    loadPointer ptr2, (COLOR_RAM+SCREEN_WIDTH*(SCREEN_HEIGHT-1)-$100)
-    loadPointer ptr3, (SCREEN_MEMORY+SCREEN_WIDTH*SCREEN_HEIGHT-$100)
-    loadPointer ptr4, (COLOR_RAM+SCREEN_WIDTH*SCREEN_HEIGHT-$100)
+    loadPointerY ptr1, (SCREEN_MEMORY+SCREEN_WIDTH*(SCREEN_HEIGHT-1)-$100)
+    loadPointerY ptr2, (COLOR_RAM+SCREEN_WIDTH*(SCREEN_HEIGHT-1)-$100)
+    loadPointerY ptr3, (SCREEN_MEMORY+SCREEN_WIDTH*SCREEN_HEIGHT-$100)
+    loadPointerY ptr4, (COLOR_RAM+SCREEN_WIDTH*SCREEN_HEIGHT-$100)
     ldy #(4*256-SCREEN_WIDTH*(SCREEN_HEIGHT-1))
     jsr memcpyDoubleAscending
 
     ; clear last line
-    loadPointer ptr1, (SCREEN_MEMORY+SCREEN_WIDTH*(SCREEN_HEIGHT-1))
+    loadPointerY ptr1, (SCREEN_MEMORY+SCREEN_WIDTH*(SCREEN_HEIGHT-1))
     lda #SCREEN_CODE_SPACE
     ldy #SCREEN_WIDTH
     jsr memset
-    loadPointer ptr1, (COLOR_RAM+SCREEN_WIDTH*(SCREEN_HEIGHT-1))
+    loadPointerY ptr1, (COLOR_RAM+SCREEN_WIDTH*(SCREEN_HEIGHT-1))
     lda screenCursorColor
     ldy #SCREEN_WIDTH
     jsr memset

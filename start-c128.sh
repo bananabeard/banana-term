@@ -16,4 +16,5 @@ x128 \
   -maximized \
   -rsdev3 "${ADDRESS}" \
   -rsdev3baud 19200 \
+  +rsdev3ip232 \
   "${PROGRAM}"

@@ -2,6 +2,9 @@
 .include "banana-c128-plus4.inc"
 .include "banana-c64-plus4.inc"
 
+ACIA_STATUS = $fd01
+ACIA_STATUS_DCD = $20
+
 ; NTSC: 1023-(111860.78125/frq[Hz])
 ; PAL: 1023-(110840.46875/frq[Hz])
 BELL_SOUND_FREQUENCY = 771 ; ##BELL_SOUND_FREQUENCY

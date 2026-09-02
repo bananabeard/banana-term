@@ -15,4 +15,5 @@ x64sc \
   -maximized \
   -rsdev3 "${ADDRESS}" \
   -rsdev3baud 38400 \
+  +rsdev3ip232 \
   "${PROGRAM}"
