@@ -16,22 +16,17 @@ PLATFORM="$4"
 SRC="$5"
 VERSION="$6"
 
-FLAVOR2=""
-if [ -n "${FLAVOR}" ]; then
-  FLAVOR2="-${FLAVOR}"
-fi
-
-echo -e "\e[92m  ### \e[96mCompiling to \e[91m${NAME} prg \e[92m###\e[0m"
+echo -e "\e[92m  ### \e[96mCompiling \e[91m${FLAVOR} prg \e[92m###\e[0m"
 
 "${CC65_HOME}/bin/cl65" \
   -I "${CC65_HOME}/include" \
   -L "${CC65_HOME}/lib" \
-  -l "${OUTPUT}/banana-term-${PLATFORM}-${VERSION}${FLAVOR2}.c.s" \
-  -m "${OUTPUT}/banana-term-${PLATFORM}-${VERSION}${FLAVOR2}.map" \
+  -l "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.c.s" \
+  -m "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.map" \
   -T \
   -t "${PLATFORM}" \
   -Or -Os \
-  -o "${OUTPUT}/banana-term-${PLATFORM}-${VERSION}${FLAVOR2}.prg" \
+  -o "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.prg" \
   --warn-align-waste \
   --warnings-as-errors \
   "${SRC}/interrupt.s" \
@@ -43,26 +38,16 @@ if [ "0" != "$?" ]; then
   exit 1
 fi
 
-echo -e "\e[92m  ### \e[96mCompiling \e[91m${NAME} d64 \e[92m###\e[0m"
+echo -e "\e[92m  ### \e[96mCreating \e[91m${FLAVOR} d64 \e[92m###\e[0m"
 
 cc1541 \
   -q \
-  -n "banana-term" \
+  -n "${NAME}" \
   -i "00 2a" \
-  -f "banana-term" -w "${OUTPUT}/banana-term-${PLATFORM}-${VERSION}${FLAVOR2}.prg" \
-  -T DEL -f "${PLATFORM}" -L \
+  -f "${NAME}" -w "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.prg" \
   -T DEL -f "version ${VERSION}" -L \
-  "${OUTPUT}/banana-term-${PLATFORM}-${VERSION}${FLAVOR2}.d64"
+  -T DEL -f "${FLAVOR}" -L \
+  "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.d64"
 if [ "0" != "$?" ]; then
   exit 1
-fi
-
-if [ -n "${FLAVOR}" ]; then
-  cc1541 \
-    -q \
-    -T DEL -f "${FLAVOR}" -L \
-    "${OUTPUT}/banana-term-${PLATFORM}-${VERSION}${FLAVOR2}.d64"
-  if [ "0" != "$?" ]; then
-    exit 1
-  fi
 fi

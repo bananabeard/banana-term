@@ -1,3 +1,0 @@
-PLATFORM = c64
-
-MODEM_COMMANDS = .byte "atv1", PETSCII_RETURN, "atdtc64u.club:6400", PETSCII_RETURN, $00

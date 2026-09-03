@@ -7,8 +7,6 @@ serialGetChar: .res 1
 
 .data
 
-connected: .byte 0
-
 .if .defined(CURSOR_SHOW)
     cursorOn: .byte 0
 .endif
@@ -208,15 +206,6 @@ welcomeMessage:
     @modemCommandsEnd:
 
     @mainLoop:
-        lda connected
-        bne @connectionChecked
-        lda ACIA_STATUS
-        and #ACIA_STATUS_DCD
-        bne @connectionChecked
-        lda #$01
-        sta connected
-    @connectionChecked:
-
         ; read keyboard
         kernalGetIn
         cmp #$00
@@ -244,15 +233,6 @@ welcomeMessage:
         loadPointerY ptr2, serialGetError
         jmp showErrorAndHalt
     @noChar:
-        lda connected
-        beq @showCursor
-        lda ACIA_STATUS
-        and #ACIA_STATUS_DCD
-        beq @showCursor
-        lda #$00
-        sta connected
-        jsr showDisconnected
-    @showCursor:
         .if .defined(CURSOR_SHOW)
             lda cursorOn
             bne @cursorOn
@@ -294,15 +274,6 @@ welcomeMessage:
         lda #$00
         sta screenCursorReverse
         jsr screenMoveCursorNextLine
-        rts
-.endproc
-
-; clobbers: a, y, ptr1, ptr2
-.proc showDisconnected
-        lda #TERMINAL_BORDER_COLOR_DISCONNECTED
-        jsr resetScreen
-        loadPointerY ptr2, serialDisconnected
-        jsr screenPutString
         rts
 .endproc
 
