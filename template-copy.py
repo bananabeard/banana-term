@@ -5,6 +5,7 @@ flavor_map = dict()
 
 with open(sys.argv[1], "r") as flavor_file:
     for line in flavor_file:
+        line = line.strip()
         index = line.find("=")
         if index >= 0:
             key = line[:index].strip()

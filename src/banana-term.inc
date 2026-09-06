@@ -19,6 +19,8 @@ BELL_RASTER_INTERRUPTS = 3*RASTER_INTERRUPTS_PER_SCREEN ; ##BELL_RASTER_INTERRUP
 ;CURSOR_SCREEN_CODE = $66 ; ##CURSOR_SCREEN_CODE
 CURSOR_SHOW = 1 ; ##CURSOR_SHOW
 
+;DISABLE_CHECKS = 1 ; ##DISABLE_CHECKS
+
 PETSCII_WHITE = $05
 PETSCII_BELL = $07
 PETSCII_RETURN = $0d
@@ -45,7 +47,7 @@ SCREEN_WIDTH = 40
 
 TERMINAL_BACKGROUND_COLOR     = COLOR_BLACK ; ##TERMINAL_BACKGROUND_COLOR
 TERMINAL_BANANA_COLOR_PETSCII = PETSCII_YELLOW ; ##TERMINAL_BANANA_COLOR_PETSCII
-TERMINAL_BORDER_COLOR         = COLOR_BLACK ; ##TERMINAL_BORDER_COLOR_ERROR
+TERMINAL_BORDER_COLOR         = COLOR_BLACK ; ##TERMINAL_BORDER_COLOR
 TERMINAL_BORDER_COLOR_ERROR   = COLOR_RED ; ##TERMINAL_BORDER_COLOR_ERROR
 TERMINAL_TEXT_COLOR           = COLOR_WHITE ; ##TERMINAL_TEXT_COLOR
 TERMINAL_TEXT_COLOR_PETSCII   = PETSCII_WHITE ; ##TERMINAL_TEXT_COLOR_PETSCII
@@ -53,10 +55,10 @@ TERMINAL_TEXT_COLOR_PETSCII   = PETSCII_WHITE ; ##TERMINAL_TEXT_COLOR_PETSCII
 .if .defined(BELL_KERNAL) .and .defined(BELL_SOUND_VOLUME)
     .assert 0, error, "cannot have both kernal and sound bells"
 .endif
-.if .defined(BELL_SOUND_FREQUENCY)
+.if .defined(BELL_SOUND_FREQUENCY) .and .not .defined(DISABLE_CHECKS)
     .if .defined(__C128__) .or .defined(__C64__)
         .if BELL_SOUND_FREQUENCY<0 .or BELL_SOUND_FREQUENCY>=65536
-            .assert 0, error, "bell sound frequency must be in the range [0, 1023]"
+            .assert 0, error, "bell sound frequency must be in the range [0, 65535]"
         .endif
     .elseif .defined(__PLUS4__)
         .if BELL_SOUND_FREQUENCY<0 .or BELL_SOUND_FREQUENCY>=1024
@@ -66,7 +68,7 @@ TERMINAL_TEXT_COLOR_PETSCII   = PETSCII_WHITE ; ##TERMINAL_TEXT_COLOR_PETSCII
         .assert 0, error, "target not supported"
     .endif
 .endif
-.if .defined(BELL_SOUND_VOLUME)
+.if .defined(BELL_SOUND_VOLUME) .and .not .defined(DISABLE_CHECKS)
     .if .defined(__C128__) .or .defined(__C64__)
         .if BELL_SOUND_VOLUME<0 .or BELL_SOUND_VOLUME>=16
             .assert 0, error, "bell sound volume must be in the range [0, 15]"

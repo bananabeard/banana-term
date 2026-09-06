@@ -35,10 +35,6 @@ modemCommandsError:
     .byte "Error code: "
     .byte $00
 
-serialDisconnected:
-    .byte "Disconnected.", PETSCII_RETURN
-    .byte $00
-
 serialGetError:
     .byte "Serial get failed.", PETSCII_RETURN
     .byte "Error code: "
@@ -78,7 +74,7 @@ welcomeMessage:
     .byte PETSCII_CLEAR
     .byte TERMINAL_BANANA_COLOR_PETSCII, "Banana"
     .byte TERMINAL_TEXT_COLOR_PETSCII, "-Term v"
-    .byte "1.1" ; #VERSION#
+    .byte "1.2" ; #VERSION#
     .byte PETSCII_RETURN
     .byte "  "
     .if .defined(__C128__) .or .defined(__C64__)
@@ -113,6 +109,8 @@ welcomeMessage:
         .byte "38400"
     .elseif SERIAL_BAUD = SER_BAUD_57600
         .byte "57600"
+    .elseif .defined(DISABLE_CHECKS)
+        .byte "xxxxx"
     .else
         .assert 0, error, "unsupported baud rate"
     .endif
