@@ -3,6 +3,7 @@
 Banana-term is a PETSCII terminal program for the Commodore 64, Plus/4, and 128. The indented use-case is everyday one-click use in emulators. Feedback on real machines would be nice.
 
 - Supports the Commodore 64 and 128 with a Swiftlink cartridge. This includes the Ultimate 64 and the Commodore 64 Ultimate machines. The ACIA address must be $DE00.
+- Supports the Ultimate-64 board and the command interface.
 - Supports the Commodore Plus/4.
 - Only 40 columns mode.
 - There's no phonebook. The program can be compiled to autodial a specific number. Alternatively it can be used with a direct link or by manual dialing.
@@ -24,10 +25,11 @@ The PETSCII interpreter is bespoke, and the kernal chrout routine is used only s
 
 ## Setup
 
-There are multiple ways to set up banana-term for easy use.
+There are multiple ways to set up banana-term for easy use. Various parameters and the address to be dialed can be customized by recompiling or by editing the precompiled binaries.
 
 - For VICE there are scripts to show the correct settings for a direct connection. These scripts can be used with the unmodified programs in the release.
-- For modems, for VICE with tcpser, and for the Ultimate 64 an autodialing variant should be compiled for each address planned to dial.
+- For modems, for VICE with tcpser, and for the Ultimate-64 with Swiftlink cartridge an autodialing variant should be used, prepared for each address planned to dial.
+- For the Ultimate-64 with command interface an ultimate64 variant should be used, prepared for each address planned to dial.
 
 ## Customization with a hex-editor
 
