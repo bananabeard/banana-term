@@ -2,14 +2,15 @@
 
 .bss
 
-modemCommandsIndex: .res 1
-serialGetChar: .res 1
+netGetData: .res 1
 
 .data
 
 .if .defined(CURSOR_SHOW)
     cursorOn: .byte 0
 .endif
+
+.rodata
 
 .if .defined(__C128__) .or .defined(__PLUS4__)
     functionKeyCodes:
@@ -23,98 +24,11 @@ serialGetChar: .res 1
     .assert 0, error, "target not supported"
 .endif
 
-.rodata
-
-; must be terminated by a zero byte
-; must be less than 256 bytes
-modemCommands:
-    .res 256, $00 ; ##MODEM_COMMANDS
-
-modemCommandsError:
-    .byte "Modem commands failed.", PETSCII_RETURN
-    .byte "Error code: "
-    .byte $00
-
-serialGetError:
-    .byte "Serial get failed.", PETSCII_RETURN
-    .byte "Error code: "
-    .byte $00
-
-serialInstallError:
-    .byte "Serial driver install failed.", PETSCII_RETURN
-    .byte "Error code: "
-    .byte $00
-
-serialInstallOk:
-    .byte "Serial driver is installed.", PETSCII_RETURN
-    .byte $00
-
-serialOpenError:
-    .byte "Serial port open failed.", PETSCII_RETURN
-    .byte "Error code: "
-    .byte $00
-
-serialOpenOk:
-    .byte "Serial port is open.", PETSCII_RETURN
-    .byte $00
-
-serialPutError:
-    .byte "Serial put failed.", PETSCII_RETURN
-    .byte "Error code: "
-    .byte $00
-
-serialOpenParameters:
-    .byte SERIAL_BAUD
-    .byte SER_BITS_8
-    .byte SER_STOP_1
-    .byte SER_PAR_NONE
-    .byte SER_HS_HW
-
 welcomeMessage:
-    .byte PETSCII_CLEAR
+    .byte PETSCII_CLEAR, PETSCII_LOWER_CASE
     .byte TERMINAL_BANANA_COLOR_PETSCII, "Banana"
     .byte TERMINAL_TEXT_COLOR_PETSCII, "-Term v"
-    .byte "1.2" ; #VERSION#
-    .byte PETSCII_RETURN
-    .byte "  "
-    .if .defined(__C128__) .or .defined(__C64__)
-        .if .defined(__C128__)
-            .byte "C128"
-        .else
-            .byte "C64"
-        .endif
-        .byte ", SwiftLink, $DE00, NMI", PETSCII_RETURN
-    .elseif .defined(__PLUS4__)
-        .byte "Plus/4, ACIA", PETSCII_RETURN
-    .else
-        .assert 0, error, "target not supported"
-    .endif
-    .byte "  "
-
-    .if SERIAL_BAUD = SER_BAUD_300
-        .byte "300"
-    .elseif SERIAL_BAUD = SER_BAUD_600
-        .byte "600"
-    .elseif SERIAL_BAUD = SER_BAUD_1200
-        .byte "1200"
-    .elseif SERIAL_BAUD = SER_BAUD_2400
-        .byte "2400"
-    .elseif SERIAL_BAUD = SER_BAUD_4800
-        .byte "4800"
-    .elseif SERIAL_BAUD = SER_BAUD_9600
-        .byte "9600"
-    .elseif SERIAL_BAUD = SER_BAUD_19200
-        .byte "19200"
-    .elseif SERIAL_BAUD = SER_BAUD_38400
-        .byte "38400"
-    .elseif SERIAL_BAUD = SER_BAUD_57600
-        .byte "57600"
-    .elseif .defined(DISABLE_CHECKS)
-        .byte "xxxxx"
-    .else
-        .assert 0, error, "unsupported baud rate"
-    .endif
-    .byte "-8N1, old-style RTS/CTS", PETSCII_RETURN
+    .byte "1.3" ; #VERSION#
     .byte PETSCII_RETURN
     .byte $00
 
@@ -135,7 +49,8 @@ welcomeMessage:
 
         lda #PETSCII_LOCK_CASE
         kernalChrOut
-        jsr screenPutControlCharLowerCase
+        loadPointerY ptr2, welcomeMessage
+        jsr screenPutString
 
         ; replace functionkey shortcuts to functionkey petscii control codes
         .if .defined(__C128__) .or .defined(__PLUS4__)
@@ -155,9 +70,6 @@ welcomeMessage:
             .assert 0, error, "target not supported"
         .endif
 
-        loadPointerY ptr2, welcomeMessage
-        jsr screenPutString
-
         .if .defined(BELL_BORDER_COLOR) .or .defined(BELL_SOUND_VOLUME)
             jsr interruptSetup
         .endif
@@ -166,71 +78,33 @@ welcomeMessage:
         pla
         tax
         pla
-        jsr _ser_install
-        cmp #SER_ERR_OK
-        beq @serialInstallOk
-        loadPointerY ptr2, serialInstallError
-        jmp showErrorAndHalt
-    @serialInstallOk:
-        loadPointerY ptr2, serialInstallOk
-        jsr screenPutString
-
-        loadPointerY ptr1, serialOpenParameters
-        jsr ser_open
-        cmp #SER_ERR_OK
-        beq @serialOpenOk
-        loadPointerY ptr2, serialOpenError
-        jmp showErrorAndHalt
-    @serialOpenOk:
-        loadPointerY ptr2, serialOpenOk
-        jsr screenPutString
-
-        ; modem commands
-        ldx #$00
-        sta modemCommandsIndex
-    @modemCommandsLoop:
-        ldx modemCommandsIndex
-        lda modemCommands,x
-        beq @modemCommandsEnd
-        inx
-        stx modemCommandsIndex
-        jsr ser_put
-        cmp #SER_ERR_OK
-        beq @modemCommandsPutOk
-        loadPointerY ptr2, modemCommandsError
-        jmp showErrorAndHalt
-    @modemCommandsPutOk:
-        jmp @modemCommandsLoop
-    @modemCommandsEnd:
+        jsr netOpen
 
     @mainLoop:
         ; read keyboard
         kernalGetIn
         cmp #$00
         beq @keyboardEnd
-        jsr ser_put
-        cmp #SER_ERR_OK
-        beq @keyboardEnd
-        cmp #SER_ERR_OVERFLOW
-        beq @putOverflow
-        loadPointerY ptr2, serialPutError
-        jmp showErrorAndHalt
-    @putOverflow:
-        .if .defined(BELL_BORDER_COLOR) .or .defined(BELL_SOUND_VOLUME) .or .defined(BELL_KERNAL)
-            jsr interruptBell
-        .endif
+        jsr netPut
     @keyboardEnd:
 
-        ; read serial
-        loadPointerY ptr1, serialGetChar
-        jsr ser_get
-        cmp #SER_ERR_OK
-        beq @gotChar
-        cmp #SER_ERR_NO_DATA
-        beq @noChar
-        loadPointerY ptr2, serialGetError
-        jmp showErrorAndHalt
-    @noChar:
+        ; read net
+        jsr netGet
+        bcc @noData
+        ; got data
+        .if .defined(CURSOR_SHOW)
+            lda cursorOn
+            beq @cursorOff
+            ; cursor on
+            lda #$00
+            sta cursorOn
+            jsr screenCursorOff
+        .endif
+    @cursorOff:
+        lda netGetData
+        jsr screenPutChar
+        jmp @mainLoop
+    @noData:
         .if .defined(CURSOR_SHOW)
             lda cursorOn
             bne @cursorOn
@@ -241,24 +115,10 @@ welcomeMessage:
         .endif
     @cursorOn:
         jmp @mainLoop
-    @gotChar:
-        .if .defined(CURSOR_SHOW)
-            lda cursorOn
-            beq @cursorOff
-            ; cursor on
-            lda #$00
-            sta cursorOn
-            jsr screenCursorOff
-        .endif
-    @cursorOff:
-        ldy #$00
-        lda (ptr1),y
-        jsr screenPutChar
-        jmp @mainLoop
 .endproc
 
 ; a: border color
-; clobbers: a, y, ptr1, ptr2
+; clobbers: a, y, ptr1, ptr2, ptr3, pt4
 .proc resetScreen
         pha
         .if .defined(BELL_BORDER_COLOR) .or .defined(BELL_SOUND_VOLUME)
@@ -280,9 +140,17 @@ welcomeMessage:
 ; never returns
 .proc showErrorAndHalt
         pha
+        lda ptr2
+        pha
+        lda ptr2+1
+        pha
         lda #TERMINAL_BORDER_COLOR_ERROR
         jsr resetScreen
         jsr screenPutString
+        pla
+        sta ptr2+1
+        pla
+        sta ptr2
         pla
         jsr screenPutHexByte
     @loop:

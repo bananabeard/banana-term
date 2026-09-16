@@ -4,36 +4,40 @@ set -e
 . ./variables.sh
 
 function compileFlavor {
-  FLAVOR_FILE="$1"
-  FLAVOUR_OUTPUT="$2"
-  FLAVOR="$(basename ${FLAVOR_FILE})"
-  echo -e "\e[92m  ### \e[96mGenerating flavor \e[91m${FLAVOR_FILE} \e[92m###\e[0m"
-  PLATFORM="$(cat ${FLAVOR_FILE} | grep PLATFORM | cut -d = -f 2 | xargs)"
-  FLAVOR_SRC="${FLAVOUR_OUTPUT}/${FLAVOR}"
-  if [ -e "${FLAVOR_SRC}" ]; then
-    echo "${FLAVOR_SRC} already exists"
+  FLAVOR_FILE2="$1"
+  FLAVOUR_OUTPUT2="$2"
+  FLAVOR2="$(basename ${FLAVOR_FILE2})"
+  echo -e "\e[92m  ### \e[96mGenerating flavor \e[91m${FLAVOR_FILE2} \e[92m###\e[0m"
+  PLATFORM2="$(cat ${FLAVOR_FILE2} | grep PLATFORM | cut -d = -f 2 | xargs)"
+  FLAVOR_SRC2="${FLAVOUR_OUTPUT2}/${FLAVOR2}"
+  if [ -e "${FLAVOR_SRC2}" ]; then
+    echo "${FLAVOR_SRC2} already exists"
     exit 1
   fi
-  mkdir -p "${FLAVOR_SRC}"
-  for SRC_FILE in ${SRC}/*; do
-    ./template-copy.py "${FLAVOR_FILE}" "${SRC_FILE}" "${FLAVOR_SRC}/$(basename ${SRC_FILE})"
+  mkdir -p "${FLAVOR_SRC2}"
+  for SRC_FILE2 in ${SRC}/*; do
+    ./template-copy.py "${FLAVOR_FILE2}" "${SRC_FILE2}" "${FLAVOR_SRC2}/$(basename ${SRC_FILE2})"
   done
-  ./compile.sh "${FLAVOR}" "${NAME}" "${FLAVOUR_OUTPUT}" "${PLATFORM}" "${FLAVOR_SRC}" "${VERSION}"
+  ./compile.sh "${FLAVOR2}" "${NAME}" "${FLAVOUR_OUTPUT2}" "${PLATFORM2}" "${FLAVOR_SRC2}" "${VERSION}"
 }
 
 function compileFlavors {
-  FLAVORS_DIR="$1"
-  if [ -d "${FLAVORS_DIR}" ]; then
-    for FLAVOR_FILE in ${FLAVORS_DIR}/*; do
-      compileFlavor "${FLAVOR_FILE}" "${OUTPUT}"
-      FLAVOR_NAME="$(basename ${FLAVOR_FILE})"
-      for ADDRESS_FILE in ${ADDRESSES}/*; do
-        ADDRESS_NAME="$(basename ${ADDRESS_FILE})"
-        ADDRESS="$(cat ${ADDRESS_FILE})"
-        FLAVOR_FILE_GENERATED="${FLAVORS_GENERATED_DIR}/${FLAVOR_NAME}-${ADDRESS_NAME}"
-        cp "${FLAVOR_FILE}" "${FLAVOR_FILE_GENERATED}"
-        echo "MODEM_COMMANDS = .byte \"atdt${ADDRESS}\", PETSCII_RETURN, \$00" >> "${FLAVOR_FILE_GENERATED}"
-        compileFlavor "${FLAVOR_FILE_GENERATED}" "${OUTPUT}"
+  FLAVORS_DIR3="$1"
+  if [ -d "${FLAVORS_DIR3}" ]; then
+    for FLAVOR_FILE3 in ${FLAVORS_DIR3}/*; do
+      compileFlavor "${FLAVOR_FILE3}" "${OUTPUT}"
+      FLAVOR_NAME3="$(basename ${FLAVOR_FILE3})"
+      for ADDRESS_FILE3 in ${ADDRESSES}/*; do
+        ADDRESS_NAME3="$(basename ${ADDRESS_FILE3})"
+        ADDRESS3="$(cat ${ADDRESS_FILE3})"
+        ADDRESS_HOST3="$(echo ${ADDRESS3} | sed -r 's/(.*)\:([^:]*)/\1/')"
+        ADDRESS_PORT3="$(echo ${ADDRESS3} | sed -r 's/(.*)\:([^:]*)/\2/')"
+        FLAVOR_FILE_GENERATED3="${FLAVORS_GENERATED_DIR}/${FLAVOR_NAME3}-${ADDRESS_NAME3}"
+        cp "${FLAVOR_FILE3}" "${FLAVOR_FILE_GENERATED3}"
+        echo "MODEM_COMMANDS = .byte \"atdt${ADDRESS3}\", PETSCII_RETURN, \$00" >> "${FLAVOR_FILE_GENERATED3}"
+        echo "ULTIMATE64_ADDRESS = .byte \"${ADDRESS_HOST3}\", \$00" >> "${FLAVOR_FILE_GENERATED3}"
+        echo "ULTIMATE64_PORT = .word ${ADDRESS_PORT3}" >> "${FLAVOR_FILE_GENERATED3}"
+        compileFlavor "${FLAVOR_FILE_GENERATED3}" "${OUTPUT}"
       done
     done
   fi
@@ -71,10 +75,14 @@ mkdir -p "${FLAVORS_GENERATED_DIR}"
 for ADDRESS_FILE in ${ADDRESSES}/*; do
   ADDRESS_NAME="$(basename ${ADDRESS_FILE})"
   ADDRESS="$(cat ${ADDRESS_FILE})"
+  ADDRESS_HOST="$(echo ${ADDRESS} | sed -r 's/(.*)\:([^:]*)/\1/')"
+  ADDRESS_PORT="$(echo ${ADDRESS} | sed -r 's/(.*)\:([^:]*)/\2/')"
   for PLATFORM in "${PLATFORMS[@]}"; do
     FLAVOR_FILE_GENERATED="${FLAVORS_GENERATED_DIR}/${PLATFORM}-${ADDRESS_NAME}"
     echo "PLATFORM = ${PLATFORM}" > "${FLAVOR_FILE_GENERATED}"
     echo "MODEM_COMMANDS = .byte \"atdt${ADDRESS}\", PETSCII_RETURN, \$00" >> "${FLAVOR_FILE_GENERATED}"
+    echo "ULTIMATE64_ADDRESS = .byte \"${ADDRESS_HOST}\", \$00" >> "${FLAVOR_FILE_GENERATED}"
+    echo "ULTIMATE64_PORT = .word ${ADDRESS_PORT}" >> "${FLAVOR_FILE_GENERATED}"
     compileFlavor "${FLAVOR_FILE_GENERATED}" "${OUTPUT}"
   done
 done
@@ -89,9 +97,10 @@ echo -e "\e[92m  ### \e[96mCreating release \e[92m###\e[0m"
 cp README*.md "${OUTPUT}/${RELEASE}"
 touch "${OUTPUT}/${RELEASE}/version-${VERSION}"
 for PLATFORM in "${PLATFORMS[@]}"; do
-  cp ${OUTPUT}/${NAME}-${VERSION}-${PLATFORM}*.d64 "${OUTPUT}/${RELEASE}/${PLATFORM}"
-  cp ${OUTPUT}/${NAME}-${VERSION}-${PLATFORM}*.prg "${OUTPUT}/${RELEASE}/${PLATFORM}"
-  cp start-${PLATFORM}*.sh "${OUTPUT}/${RELEASE}/${PLATFORM}"
+  cp `find output -maxdepth 1 -type f | grep -E -e "${OUTPUT}/${NAME}-${VERSION}-${PLATFORM}.*(d64|prg)" | grep -F -v ".private"` "${OUTPUT}/${RELEASE}/${PLATFORM}"
+  if [ -e "start-${PLATFORM}.sh" ]; then
+    cp start-${PLATFORM}*.sh "${OUTPUT}/${RELEASE}/${PLATFORM}"
+  fi
 done
 cd "${OUTPUT}/${RELEASE}"
 zip -9r "${NAME}-${VERSION}.zip" *

@@ -1,3 +1,4 @@
 .idea
-flavors.private
+addresses/*.private
+flavors/*.private
 output

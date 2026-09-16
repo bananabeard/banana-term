@@ -1,7 +1,13 @@
-#include <serial.h>
+#ifndef ULTIMATE64
+    #include <serial.h>
+#endif
 
 void __fastcall__ mainAssembly(const void*);
 
 void main(void) {
-    mainAssembly(ser_static_stddrv);
+    #ifdef ULTIMATE64
+        mainAssembly(0);
+    #else
+        mainAssembly(ser_static_stddrv);
+    #endif
 }

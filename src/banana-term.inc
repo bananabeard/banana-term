@@ -1,7 +1,10 @@
 .include "cbm_kernal.inc"
-.include "ser-error.inc"
-.include "ser-kernel.inc"
 .include "zeropage.inc"
+
+.if .not .defined(ULTIMATE64)
+    .include "ser-error.inc"
+    .include "ser-kernel.inc"
+.endif
 
 .if .defined(__C128__)
     .include "banana-c128.inc"
@@ -48,6 +51,9 @@ SCREEN_WIDTH = 40
 TERMINAL_BACKGROUND_COLOR     = COLOR_BLACK ; ##TERMINAL_BACKGROUND_COLOR
 TERMINAL_BANANA_COLOR_PETSCII = PETSCII_YELLOW ; ##TERMINAL_BANANA_COLOR_PETSCII
 TERMINAL_BORDER_COLOR         = COLOR_BLACK ; ##TERMINAL_BORDER_COLOR
+.if .defined(ULTIMATE64)
+    TERMINAL_BORDER_COLOR_DISCONNECTED = COLOR_BLUE ; ##TERMINAL_BORDER_COLOR_DISCONNECTED
+.endif
 TERMINAL_BORDER_COLOR_ERROR   = COLOR_RED ; ##TERMINAL_BORDER_COLOR_ERROR
 TERMINAL_TEXT_COLOR           = COLOR_WHITE ; ##TERMINAL_TEXT_COLOR
 TERMINAL_TEXT_COLOR_PETSCII   = PETSCII_WHITE ; ##TERMINAL_TEXT_COLOR_PETSCII
@@ -82,6 +88,14 @@ TERMINAL_TEXT_COLOR_PETSCII   = PETSCII_WHITE ; ##TERMINAL_TEXT_COLOR_PETSCII
     .endif
 .endif
 
+; clobbers: x
+.macro loadPointerX pointer, address
+    ldx #<address
+    stx pointer
+    ldx #>address
+    stx pointer+1
+.endmacro
+
 ; clobbers: y
 .macro loadPointerY pointer, address
     ldy #<address
@@ -103,6 +117,13 @@ TERMINAL_TEXT_COLOR_PETSCII   = PETSCII_WHITE ; ##TERMINAL_TEXT_COLOR_PETSCII
 .global memcpyDoubleAscending
 .global memset
 
+.global netGet
+.global netGetData
+.global netOpen
+.global netPut
+
+.global resetScreen
+
 .global screenCursorColor
 .if .defined(CURSOR_SHOW)
     .global screenCursorOff
@@ -114,3 +135,5 @@ TERMINAL_TEXT_COLOR_PETSCII   = PETSCII_WHITE ; ##TERMINAL_TEXT_COLOR_PETSCII
 .global screenPutControlCharLowerCase
 .global screenPutHexByte
 .global screenPutString
+
+.global showErrorAndHalt

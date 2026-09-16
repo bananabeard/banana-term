@@ -25,6 +25,7 @@ Parameters:
 - COLOR_LIGHT_GRAY
 - TERMINAL_BACKGROUND_COLOR
 - TERMINAL_BORDER_COLOR
+- TERMINAL_BORDER_COLOR_DISCONNECTED
 - TERMINAL_BORDER_COLOR_ERROR
 - TERMINAL_TEXT_COLOR
 
@@ -149,3 +150,8 @@ The cc65 serial driver defines valid values, they are in `ser-kernel.inc`.
 - $14: 31250
 - $15: 62500
 - $16: 56.875
+
+## Ultimate-64 mode address
+
+- ULTIMATE64_ADDRESS: The ip address or host name of the server. The buffer is 252 bytes. The string must be zero terminated.
+- ULTIMATE64_PORT: The TCP port of the server. The first byte is the least significant byte, the second is the most significant.

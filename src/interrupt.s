@@ -70,7 +70,9 @@
                     and #$fc
                     ora #>BELL_SOUND_FREQUENCY
                     sta TED_BMPADDR
-                    lda #$10|BELL_SOUND_VOLUME
+                    ; two step load so binary-map can pick up the value
+                    lda #BELL_SOUND_VOLUME
+                    ora #$10
                     sta TED_SCR
                 .else
                     .assert 0, error, "target not supported"

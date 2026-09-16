@@ -52,11 +52,27 @@ The `compile-all.sh` script recompiles everything and leaves the result in the `
 There will be a configuration without an address.
 - Flavors are the three vanilla configurations and one flavor for each file in the `flavors` directory. Look at the provided flavor files and at `flavor.option` file to get an idea about the available options. The compilation process always substitutes a whole line in place of a whole line. This is the reason for the arcane syntax of the flavor files.
 
-## Speed
+## Speed comparison
+
+I performed some rudimentary measurements of the overall speed of a few terminal programs. I pointed my phone on the screen, sent a whole-screen update, and counted the number of frames it took to redraw the screen. The recordings were at 30 fps.
+
+| Machine     | Program        | Connection              | Frames |
+| ----------- | -------------- | ----------------------- | -----: |
+| Ultimate-64 | CCGMS Ultimate | Swiftlink, 38400, wifi  |     68 |
+| Ultimate-64 | CCGMS Future   | Swiftlink, 38400, wifi  |     61 |
+| Ultimate-64 | UltimateTerm   | command interface, wifi |     21 |
+| Ultimate-64 | banana-term    | Swiftlink, 38400, wifi  |     18 |
+| Ultimate-64 | banana-term    | command interface, wifi |     12 |
+| VICE C128   | banana-term    | ACIA, 19200, local      |     25 |
+| VICE C64    | banana-term    | ACIA, 38400, local      |     16 |
+| VICE Plus/4 | banana-term    | ACIA, 19200, local      |     24 |
+
+## Serial speed
 
 I performed some rudimentary measurements of the throughput of banana-term.
 The test was simple. I sent whole-screen updates to the terminal, and increased the border color any time there were no new data in the incoming serial buffer.
 In this way the border flickers when the PETSCII interpreter is faster than the incoming data, and there's no flicker when the PETSCII interpreter is lagging behind the data.
+
 - C128: flicker at 9600 baud, no flicker at 19200.
 - C64: flicker at 19200 baud, no flicker at 38400.
 - Plus/4: flicker at 19200 baud, and that's the maximum rate.
@@ -66,3 +82,4 @@ In this way the border flickers when the PETSCII interpreter is faster than the 
 - The serial driver sometimes crashes on the C128. While the [issue](https://github.com/cc65/cc65/issues/2443) have been brought up quite a while ago, it's still not clear what causes it. The workaround for the time being is to use 19200 baud rate on the C128, and not 38400. This seems to make the problem go away in VICE.
 - The serial driver doesn't support detecting the loss of carrier. In fact, the design of the ACIA chip doesn't allow the reliable detection of the carrier.
 - The Plus/4 version has a short pause before it starts to read the keyboard. This needs further investigations.
+- The Ultimate-64 firmware version 3.15a blocks on a write when the send buffer is full until the buffer has free space again. The write API has provisions to report back the number of bytes successfully written to the buffer, and there's code in banana-term to handle the situation. The future is uncertain though, as the read call has a similar byte count, but on empty reads the result is not a `00,OK` with zero bytes, but an undocumented error `02`.

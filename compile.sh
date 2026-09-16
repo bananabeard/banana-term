@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+. ./variables.sh
+
 if [ -z "${CC65_HOME+x}" ]; then
   CC65_HOME="${HOME}/lib/cc65"
 fi
@@ -18,20 +20,36 @@ VERSION="$6"
 
 echo -e "\e[92m  ### \e[96mCompiling \e[91m${FLAVOR} prg \e[92m###\e[0m"
 
+if [ "${ULTIMATE64}" == "${PLATFORM}" ]; then
+  DEFINE_ULTIMATE64_ASM="--asm-define ULTIMATE64=1"
+  DEFINE_ULTIMATE64_C="-D ULTIMATE64=1"
+  NET_S="net-ultimate64.s"
+  TARGET="${C64}"
+else
+  DEFINE_ULTIMATE64_ASM=""
+  DEFINE_ULTIMATE64_C=""
+  NET_S="net-serial.s"
+  TARGET="${PLATFORM}"
+fi
+
 "${CC65_HOME}/bin/cl65" \
-  -I "${CC65_HOME}/include" \
-  -L "${CC65_HOME}/lib" \
-  -l "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.c.s" \
-  -m "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.map" \
-  -T \
-  -t "${PLATFORM}" \
+  --add-source \
+  ${DEFINE_ULTIMATE64_ASM} \
+  ${DEFINE_ULTIMATE64_C} \
+  --include-dir "${CC65_HOME}/include" \
+  --lib-path "${CC65_HOME}/lib" \
+  --listing "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.c.s" \
+  --mapfile "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.map" \
   -Or -Os \
   -o "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.prg" \
+  --target "${TARGET}" \
+  -vm \
   --warn-align-waste \
   --warnings-as-errors \
   "${SRC}/interrupt.s" \
   "${SRC}/main.s" \
   "${SRC}/memory.s" \
+  "${SRC}/${NET_S}" \
   "${SRC}/screen.s" \
   "${SRC}/main.c"
 if [ "0" != "$?" ]; then
@@ -46,8 +64,25 @@ cc1541 \
   -i "00 2a" \
   -f "${NAME}" -w "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.prg" \
   -T DEL -f "version ${VERSION}" -L \
-  -T DEL -f "${FLAVOR}" -L \
   "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.d64"
 if [ "0" != "$?" ]; then
   exit 1
 fi
+FLAVOR_REMAINDER="${FLAVOR}"
+while [ -n "${FLAVOR_REMAINDER}" ]; do
+  SIZE=${#FLAVOR_REMAINDER}
+  if (( ${SIZE} <= 16 )); then
+    NEXT="${FLAVOR_REMAINDER}"
+    FLAVOR_REMAINDER=""
+  else
+    NEXT="${FLAVOR_REMAINDER:0:16}"
+    FLAVOR_REMAINDER="${FLAVOR_REMAINDER:16}"
+  fi
+  cc1541 \
+    -q \
+    -T DEL -f "${NEXT}" -L \
+    "${OUTPUT}/${NAME}-${VERSION}-${FLAVOR}.d64"
+  if [ "0" != "$?" ]; then
+    exit 1
+  fi
+done

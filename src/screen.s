@@ -14,6 +14,7 @@
 ; static locals
 
 screenPutStringIndex: .res 1
+screenPutStringPointer: .res 2
 
 .data
 
@@ -259,7 +260,7 @@ screenHexCodes: .byte "0123456789abcdef"
         rts
 .endproc
 
-; clobbers: a, status
+; clobbers: a, status, ptr1, ptr2, ptr3, ptr4
 .proc screenMoveCursorDown
         lda screenCursorY
         cmp #(SCREEN_HEIGHT-1)
@@ -328,7 +329,7 @@ screenHexCodes: .byte "0123456789abcdef"
     rts
 .endproc
 
-; clobbers: a, y, status
+; clobbers: a, y, status, ptr1, ptr2, ptr3, ptr4
 .proc screenMoveCursorNextLine
         ldy screenCursorY
         cpy #(SCREEN_HEIGHT-1)
@@ -353,7 +354,7 @@ screenHexCodes: .byte "0123456789abcdef"
         jmp screenMoveCursorLastLineFirstColumn
 .endproc
 
-; clobbers: a, status
+; clobbers: a, status, ptr1, ptr2, ptr3, ptr4
 .proc screenMoveCursorRight
         lda screenCursorX
         cmp #(SCREEN_WIDTH-1)
@@ -403,7 +404,7 @@ screenHexCodes: .byte "0123456789abcdef"
 
 ; input:
 ;   a: char to put
-; clobbers: a, y, status, ptr1
+; clobbers: a, y, status, ptr1, ptr2, ptr3, ptr4
 .proc screenPutChar
         tay
         and #$60
@@ -593,7 +594,7 @@ screenHexCodes: .byte "0123456789abcdef"
 
 ; input:
 ;   a: the byte to
-; clobbers: a, x, y, status
+; clobbers: a, x, y, status, ptr1, ptr2, ptr3, ptr4
 .proc screenPutHexByte
     tax
     lsr
@@ -613,7 +614,7 @@ screenHexCodes: .byte "0123456789abcdef"
 
 ; input:
 ;   a: char to put, a & 0x60 != 0 must be true
-; clobbers: a, (x), y, status, (ptr1)
+; clobbers: a, (x), y, status, (ptr1), ptr1, ptr2, ptr3, ptr4
 .proc screenPutRegularChar
         cmp #$60
         bcc @below60
@@ -684,11 +685,19 @@ screenHexCodes: .byte "0123456789abcdef"
 ; input:
 ;   ptr2: pointer to the start of a zero terminated string
 ;         string must fit in a page
-; clobbers: a, y, status, ptr1
+; clobbers: a, y, status, ptr1, ptr2, ptr3, ptr4
 .proc screenPutString
+        lda ptr2
+        sta screenPutStringPointer
+        lda ptr2+1
+        sta screenPutStringPointer+1
         ldy #$00
         sty screenPutStringIndex
     @loop:
+        lda screenPutStringPointer
+        sta ptr2
+        lda screenPutStringPointer+1
+        sta ptr2+1
         ldy screenPutStringIndex
         lda (ptr2),y
         beq @end
@@ -699,7 +708,7 @@ screenHexCodes: .byte "0123456789abcdef"
         rts
 .endproc
 
-; clobbers: a, y, status, ptr1, ptr2
+; clobbers: a, y, status, ptr1, ptr2, ptr3, ptr4
 .proc screenScrollOneLine
     .assert (SCREEN_HEIGHT * SCREEN_WIDTH = 1000), error, "screen size is not supported"
     .assert (<COLOR_RAM = 0), error, "color ram is not aligned"
